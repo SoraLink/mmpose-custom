@@ -1256,3 +1256,24 @@ class FilterAnnotations(BaseTransform):
                 f'by_area={self.by_area}, '
                 f'by_kpt={self.by_kpt}, '
                 f'keep_empty={self.keep_empty})')
+
+@TRANSFORMS.register_module()
+class DebugPrintScale:
+    def __init__(self, tag):
+        self.tag = tag
+    def __call__(self, results):
+        s = results['bbox_scale']
+        if (not np.isfinite(s).all()) or (s <= 1e-6).any():
+            print(f'[{self.tag}] BAD scale:', s, 'img:', results.get('img_path'),
+                  'bbox:', results.get('bbox', None))
+        return results
+
+@TRANSFORMS.register_module()
+class ClampScale:
+    def __init__(self, min_scale=1e-2):
+        self.min_scale = float(min_scale)
+    def __call__(self, results):
+        s = np.asarray(results['bbox_scale'], dtype=np.float32)
+        s = np.maximum(s, self.min_scale)
+        results['bbox_scale'] = s
+        return results
